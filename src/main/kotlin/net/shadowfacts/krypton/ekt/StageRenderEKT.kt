@@ -11,19 +11,27 @@ import java.io.File
 class StageRenderEKT(
 		private val cacheDir: File? = null,
 		private val includesDir: File? = null,
+		private val layoutsDir: File? = null,
 		private val data: Map<String, EKT.TypedValue>
 ): Stage() {
 
 	override val id = "ekt"
 
-	constructor(cacheDir: File?, includesDir: File?, init: EKT.DataProvider.() -> Unit): this (cacheDir, includesDir, EKT.DataProvider.init(init))
+	constructor(cacheDir: File? = null, includesDir: File? = null, layoutsDir: File? = null, init: EKT.DataProvider.() -> Unit): this(cacheDir, includesDir, layoutsDir, EKT.DataProvider.init(init))
 
 	override fun scan(page: Page) {
 	}
 
 	override fun apply(page: Page, input: String): String {
 		val env = Environment(page, input, cacheDir, includesDir, data)
-		return EKT.render(env)
+		var result = EKT.render(env)
+		if (layoutsDir != null && "layout" in page.metadata) {
+			val data = data.toMutableMap()
+			data["content"] = EKT.TypedValue(result, "String")
+			val layoutEnv = Environment(page, File(layoutsDir, page.metadata["layout"] as String).readText(Charsets.UTF_8), cacheDir, includesDir, data)
+			result = EKT.render(layoutEnv)
+		}
+		return result
 	}
 
 	private class Environment: EKT.TemplateEnvironment {
