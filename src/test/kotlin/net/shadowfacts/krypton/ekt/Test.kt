@@ -5,6 +5,7 @@ import net.shadowfacts.krypton.config.Configuration
 import net.shadowfacts.krypton.ekt.config.EKTConfig
 import net.shadowfacts.krypton.ekt.config.ekt
 import net.shadowfacts.krypton.ekt.pipeline.PipelineVoidIncludesLayouts
+import net.shadowfacts.krypton.ekt.pipeline.stage.StageLayoutEKT
 import net.shadowfacts.krypton.ekt.pipeline.stage.StageRenderEKT
 import net.shadowfacts.krypton.pipeline.selector.PipelineSelectorExtension
 import net.shadowfacts.krypton.util.dependencies.Dependencies
@@ -26,7 +27,10 @@ fun main(args: Array<String>) {
 
 	krypton.createPipeline {
 		selector = PipelineSelectorExtension("html")
-		addStage(StageRenderEKT(mapOf()), Dependencies {
+		addStage(StageRenderEKT(), Dependencies {
+		})
+		addStage(StageLayoutEKT(), Dependencies {
+			after += "ekt"
 		})
 	}
 	krypton.addPipeline(PipelineVoidIncludesLayouts, 100)
