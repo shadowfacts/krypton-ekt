@@ -3,10 +3,12 @@ package net.shadowfacts.krypton.ekt.pipeline.stage
 import net.shadowfacts.ekt.EKT
 import net.shadowfacts.krypton.Page
 import net.shadowfacts.krypton.ekt.config.ekt
+import net.shadowfacts.krypton.ekt.util.EKTException
 import net.shadowfacts.krypton.ekt.util.Environment
 import net.shadowfacts.krypton.pipeline.stage.Stage
 import org.yaml.snakeyaml.Yaml
 import java.io.File
+import javax.script.ScriptException
 
 /**
  * @author shadowfacts
@@ -51,7 +53,12 @@ class StageLayoutEKT(
 		val data = data.toMutableMap()
 		data["content"] = EKT.TypedValue(content, "String")
 		val env = Environment(page, layout, cacheDir, includesDir, data)
-		val res = EKT.render(env)
+
+		val res = try {
+			EKT.render(env)
+		} catch (e: ScriptException) {
+			throw EKTException("Unable to render layout '$layout' for ${page.source}", e)
+		}
 
 		return if ("layout" in metadata) {
 			layout(page, res, metadata["layout"] as String, layoutsDir, cacheDir, includesDir)

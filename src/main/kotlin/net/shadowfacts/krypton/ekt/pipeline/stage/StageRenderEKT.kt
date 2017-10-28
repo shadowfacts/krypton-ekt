@@ -3,8 +3,10 @@ package net.shadowfacts.krypton.ekt.pipeline.stage
 import net.shadowfacts.ekt.EKT
 import net.shadowfacts.krypton.Page
 import net.shadowfacts.krypton.ekt.config.ekt
+import net.shadowfacts.krypton.ekt.util.EKTException
 import net.shadowfacts.krypton.ekt.util.Environment
 import net.shadowfacts.krypton.pipeline.stage.Stage
+import javax.script.ScriptException
 
 /**
  * @author shadowfacts
@@ -25,7 +27,11 @@ class StageRenderEKT(
 		val includesDir = page.krypton.config.ekt.includesDir
 
 		val env = Environment(page, input, cacheDir, includesDir, data)
-		return EKT.render(env)
+		try {
+			return EKT.render(env)
+		} catch (e: ScriptException) {
+			throw EKTException("Unable to render ${page.source}", e)
+		}
 	}
 
 }
