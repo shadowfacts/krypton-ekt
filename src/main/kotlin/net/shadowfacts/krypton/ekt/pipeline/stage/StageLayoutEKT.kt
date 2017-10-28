@@ -5,6 +5,7 @@ import net.shadowfacts.krypton.Page
 import net.shadowfacts.krypton.ekt.config.ekt
 import net.shadowfacts.krypton.ekt.util.Environment
 import net.shadowfacts.krypton.pipeline.stage.Stage
+import org.yaml.snakeyaml.Yaml
 import java.io.File
 
 /**
@@ -27,27 +28,52 @@ class StageLayoutEKT(
 		val layoutsDir = page.krypton.config.ekt.layoutsDir
 
 		if (layoutsDir != null && "layout" in page.metadata) {
-			val layout = File(layoutsDir, page.metadata["layout"] as String).readText(Charsets.UTF_8)
+			val layout = page.metadata["layout"] as String
 
 			if ("pages" in page.metadata) {
 				val pages = page.metadata["pages"] as? List<String>
 				if (pages != null) {
 					page.metadata["pages"] = pages.map {
-						layout(page, it, layout, cacheDir, includesDir)
+						layout(page, it, layout, layoutsDir, cacheDir, includesDir)
 					}
 				}
 			} else {
-				return layout(page, input, layout, cacheDir, includesDir)
+				return layout(page, input, layout, layoutsDir, cacheDir, includesDir)
 			}
 		}
 		return input
 	}
 
-	private fun layout(page: Page, content: String, layout: String, cacheDir: File?, includesDir: File?): String {
+	private fun layout(page: Page, content: String, layout: String, layoutsDir: File, cacheDir: File?, includesDir: File?): String {
+		val layoutFile = File(layoutsDir, layout)
+		val (metadata, layout) = splitYamlFrontmatter(layoutFile)
+
 		val data = data.toMutableMap()
 		data["content"] = EKT.TypedValue(content, "String")
 		val env = Environment(page, layout, cacheDir, includesDir, data)
-		return EKT.render(env)
+		val res = EKT.render(env)
+
+		return if ("layout" in metadata) {
+			layout(page, res, metadata["layout"] as String, layoutsDir, cacheDir, includesDir)
+		} else {
+			res
+		}
+	}
+
+	private fun splitYamlFrontmatter(layout: File): Pair<Map<String, Any>, String> {
+		val input = layout.readText(Charsets.UTF_8)
+		val parts = input.split("---")
+		if (parts.size >= 2) {
+			val input = parts.drop(2).joinToString("---")
+
+			val yaml = Yaml().load(parts[1])
+			if (System.getProperty("kyrpton.metadata.debugFrontMatter").toBoolean()) {
+				println("Front matter for $layout: $yaml")
+			}
+			return yaml as Map<String, Any> to input
+		} else {
+			return mapOf<String, Any>() to input
+		}
 	}
 
 }
